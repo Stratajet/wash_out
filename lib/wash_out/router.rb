@@ -63,7 +63,11 @@ module WashOut
       return env['wash_out.soap_data'] if env['wash_out.soap_data']
 
       env['wash_out.soap_data'] = nori(controller.soap_config.snakecase_input).parse(soap_body env)
-      references = WashOut::Dispatcher.deep_select(env['wash_out.soap_data']){|k,v| v.is_a?(Hash) && v.has_key?(:@id)}
+
+      # deal with referenced arrays
+      WashOut::Dispatcher.process_referenced_arrays_objects(env['wash_out.soap_data'])
+
+      references = WashOut::Dispatcher.deep_select_for_ids_and_arrays(env['wash_out.soap_data'])
 
       unless references.blank?
         replaces = {}; references.each{|r| replaces['#'+r[:@id]] = r}

@@ -22,35 +22,22 @@ describe WashOut::Dispatcher do
     WashOut::Dispatcher.deep_replace_href({:bar => {:foo => {:@href => 1}}}, {1 => 2}).should == {:bar => {:foo => 2}}
   end
 
-  xit "parses typical request" do
-    dispatcher = Dispatcher.mock("<foo>1</foo>")
-    dispatcher._parse_soap_parameters
-    dispatcher.params.should == {:foo => "1"}
+  it "processes referenced array objects" do
+    test_arr = {:Envelope=>{:Body=>{
+      :ScheduleSubmit => {:schedule_data=>{:@href=>"#id1"}},
+      :schedule_data => { :schedule=>{:@href=>"#id2"}, :@id=>"id1"},
+      :Array=>{:Item=>{:@href=>"#id3"},:@id=>"id2",:"@soapenc:arrayType"=>"tns:soap_aircraft_event[1]"},
+      :soap_aircraft_event=>{:fname=>"Test",:lname=>"User",:@id=>"id3"}}}
+    }
+    expect(WashOut::Dispatcher.process_referenced_arrays_objects(test_arr)).to eq({:Envelope=>{:Body=>{
+      :ScheduleSubmit=>{:schedule_data=>{:@href=>"#id1"}},
+      :schedule_data=>{:schedule=>[{:@href=>"#id3"}], :@id=>"id1"},
+      :Array=>{:Item=>{:@href=>"#id3"}, :@id=>"id2", :"@soapenc:arrayType"=>"tns:soap_aircraft_event[1]"},
+      :soap_aircraft_event=>{:fname=>"Test", :lname=>"User", :@id=>"id3"}}}})
   end
 
-  xit "parses href request" do
-    dispatcher = Dispatcher.mock <<-XML
-      <root>
-        <request>
-          <entities href="#id1">
-          </entities>
-        </request>
-        <entity id="id1">
-          <foo><bar>1</bar></foo>
-          <sub href="#id2" />
-        </entity>
-        <ololo id="id2">
-          <foo>1</foo>
-        </ololo>
-      </root>
-    XML
-    dispatcher._parse_soap_parameters
-    dispatcher.params[:root][:request][:entities].should == {
-      :foo => {:bar=>"1"},
-      :sub => {:foo=>"1", :@id=>"id2"},
-      :@id => "id1"
-    }
-  end
+
+
 
   describe "#_map_soap_parameters" do
     let(:dispatcher) { Dispatcher.new }

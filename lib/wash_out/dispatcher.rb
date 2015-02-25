@@ -172,15 +172,47 @@ module WashOut
       result
     end
 
+    def self.deep_select_for_ids_and_arrays(hash, result=[])
+      result += Hash[hash.select {|k, v| v.is_a?(Hash) && v.has_key?(:@id) }].values
+
+      hash.each do |key, value|
+        if value.is_a? Hash
+          result = deep_select_for_ids_and_arrays(value, result)
+        elsif value.is_a? Array
+          result += value.select { |v| v.is_a?(Hash) && v.has_key?(:@id) }
+        end
+      end
+      result
+    end
+
+
     def self.deep_replace_href(hash, replace)
-      return replace[hash[:@href]] if hash.has_key?(:@href)
+      return replace[hash[:@href]] || hash if hash.has_key?(:@href)
 
       hash.keys.each do |key, value|
-        hash[key] = deep_replace_href(hash[key], replace) if hash[key].is_a?(Hash)
+        if hash[key].is_a?(Hash)
+          hash[key] = deep_replace_href(hash[key], replace)
+        elsif hash[key].is_a?(Array)
+          hash[key] = hash[key].map { |i| i.is_a?(Hash) ? deep_replace_href(i, replace) : i }
+        end
       end
 
       hash
     end
+
+    def self.process_referenced_arrays_objects(hash)
+      # get all the arrays and references them by id
+      arrays_keyed_by_id = deep_select(hash){ |k,v| v.is_a?(Hash) && v.has_key?(:"@soapenc:arrayType") && v.has_key?(:@id) && v.has_key?(:Item) }.each_with_object({}) do |arr_obj, hash|
+        hash["##{arr_obj[:@id]}"] = Array.wrap(arr_obj[:Item])
+      end
+
+      #replace the references to the Array with the actual array
+      deep_replace_href(hash, arrays_keyed_by_id)
+      hash
+    end
+
+
+
 
     private
 
