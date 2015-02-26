@@ -202,8 +202,9 @@ module WashOut
 
     def self.process_referenced_arrays_objects(hash)
       # get all the arrays and references them by id
-      arrays_keyed_by_id = deep_select(hash){ |k,v| v.is_a?(Hash) && v.has_key?(:"@soapenc:arrayType") && v.has_key?(:@id) && v.has_key?(:Item) }.each_with_object({}) do |arr_obj, hash|
-        hash["##{arr_obj[:@id]}"] = Array.wrap(arr_obj[:Item])
+      arrays_keyed_by_id = deep_select(hash){ |k,v|
+        v.is_a?(Hash) && (v.has_key?(:"@soapenc:arrayType") || v.has_key?(:"@soapenc:array_type")) && v.has_key?(:@id) && (v.has_key?(:Item) || v.has_key?(:item)) }.each_with_object({}) do |arr_obj, hash|
+        hash["##{arr_obj[:@id]}"] = Array.wrap(arr_obj[:Item] || arr_obj[:item])
       end
 
       #replace the references to the Array with the actual array
