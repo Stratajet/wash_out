@@ -67,7 +67,11 @@ module WashOut
 
       @map       = self.class.soap_actions
       @namespace = soap_config.namespace
-      @name      = controller_path.gsub('/', '_')
+      
+      # @name      = controller_path.gsub('/', '_')
+      # A bit hacky but this allow use to use scopes in routes, otherwise the path includes the module name
+      # and it will fail when build _action_url in the wsdl.builder
+      @name      = request.env['ORIGINAL_FULLPATH'][1..-6].gsub('/','_')
 
       render :template => "wash_out/#{soap_config.wsdl_style}/wsdl", :layout => false,
              :content_type => 'text/xml'
